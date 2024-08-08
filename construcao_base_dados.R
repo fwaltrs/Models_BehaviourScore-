@@ -594,7 +594,7 @@ tratamento_dados <- function(df){
     }
     
     
-    # atributos.bk_103_001_qtde_cnpj_raiz_distintos_ativa
+    # qtde_cnpj_raiz_distintos_ativa
     table(df$var_264,exclude=NULL)
     pos=which(is.na(df$var_264))
     table(df$var_resposta[pos])
@@ -602,7 +602,7 @@ tratamento_dados <- function(df){
       df$var_264[which(is.na(df$var_264))] <- 0
     }
     
-    ### var_272, atributos.bk_103_002_qtde_cnpj_raiz_distintos_ativa
+    ### var_272, qtde_cnpj_raiz_distintos_ativa
     
     table(df$var_272,exclude=NULL)
     pos=which(is.na(df$var_272))
@@ -681,10 +681,6 @@ tratamento_dados <- function(df){
       df$var_424[which(is.na(df$var_424) & df$var_resposta == 0)] <- media0
     }
     
-    
-    
-    
-    
     # demais manipulações
     df$CAT_var_1 = as.factor(ifelse(df$var_1=="masculino","C1","C0"))
     df$CAT_var_339=as.factor(df$var_339)
@@ -697,7 +693,6 @@ tratamento_dados <- function(df){
     
     df$var_272 <- as.numeric(df$var_272)
     df$var_338 = as.numeric(df$var_338)
-    
     df$var_340 <- as.numeric(df$var_340)
     df$var_341 <- as.numeric(df$var_341)
     df$var_342 <- as.numeric(df$var_342)
