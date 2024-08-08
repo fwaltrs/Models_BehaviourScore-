@@ -602,7 +602,7 @@ tratamento_dados <- function(df){
       df$var_264[which(is.na(df$var_264))] <- 0
     }
     
-    ### var_272, qtde_cnpj_raiz_distintos_ativa
+    ### var_272
     
     table(df$var_272,exclude=NULL)
     pos=which(is.na(df$var_272))
