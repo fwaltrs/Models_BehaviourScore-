@@ -108,7 +108,7 @@ ggplot(importances %>% top_n(n=20), aes(x=reorder(variable, importance),
 ############################### Medidas de Desempenho #############################################################
 
 # Área sob a curva ROC      
-roc_obj <- roc(teste$var_resposta, previsoes$predictions[,1])
+roc_obj_mod2 <- roc(teste$var_resposta, previsoes$predictions[,1])
 auc_roc <- auc(roc_obj)
 
 # Calcular o índice de Gini
@@ -176,7 +176,7 @@ threshold2 <- 0.580
 threshold3 <- 0.811
 
 # Aplicar o ponto de corte 
-previsoes_threshold1 <- ifelse(probabilidades$predictions[,1] < threshold1, "1", "0")
+previsoes_threshold1 <- ifelse(probabilidades$predictions[,1] < threshold1, 1, 0)
 table(previsoes_threshold1)
 
 risco = 1*(as.numeric(previsoes_threshold1)!= as.numeric(as.matrix(teste$var_resposta)))  %>% mean()
@@ -184,18 +184,15 @@ var_risco = 1*(as.numeric(previsoes_threshold1)!= as.numeric(as.matrix(teste$var
 
 ## IC para o risco estimado 
 
-ic_inferior <- risco-1.96*sqrt(var_risco/length(teste)) #0.2055516
-ic_superior <- risco+1.96*sqrt(var_risco/length(teste)) #0.322883
+ic_inferior <- risco-1.96*sqrt(var_risco/nrow(teste)) #0.2612
+ic_superior <- risco+1.96*sqrt(var_risco/nrow(teste)) #0.2672
 
 
 # matriz de confusão 
 
-teste$previsoes <- as.factor(
-  ifelse(
-    previsoes_threshold1
-    ==1,"1","0"))
+teste$previsoes <- as.factor(previsoes_threshold1)
 teste$var_resposta <- as.factor(teste$var_resposta) 
-teste$var_resposta <- as.factor(teste$var_resposta)
+
 matriz <- confusionMatrix(as.factor(teste$previsoes), 
                           as.factor(teste$var_resposta),positive="1")
 
@@ -205,21 +202,21 @@ matriz$byClass["F1"]
 # KS para a base toda
 dados = base[,-c(1,2,3,220,221)] 
 previsoes <- predict(floresta, data = dados)
-score=previsoes$predictions[,1]*1000 
+score=previsoes$predictions[,1]*1000 ##prob de ser 0 
 base$score = score
 ks.test(base[base$var_resposta==0,]$score, base[base$var_resposta==1,]$score)$statistic  
 
 # KS para a amostra de treino
 previsoes_treino <- predict(floresta, data = treino)
-score_treino =previsoes_treino$predictions[,1]*1000 
+score_treino =previsoes_treino$predictions[,1]*1000 ##prob de ser 0 
 treino$score_treino = score_treino
-ks.test(treino[treino$var_resposta==0,]$score_treino, treino[treino$var_resposta==1,]$score_treino)$statistic  
+ks.test(treino[treino$var_resposta==0,]$score_treino, treino[treino$var_resposta==1,]$score_treino)$statistic
 
 # KS para a amostra de teste
 previsoes_teste <- predict(floresta, data = teste)
 score_teste =previsoes_teste$predictions[,1]*1000 
 teste$score_teste = score_teste
-ks.test(teste[teste$var_resposta==0,]$score_teste, teste[teste$var_resposta==1,]$score_teste)$statistic   
+ks.test(teste[teste$var_resposta==0,]$score_teste, teste[teste$var_resposta==1,]$score_teste)$statistic  # 
 
 #############################################################################################
 ############################### Densidade do score ##########################################
@@ -232,15 +229,15 @@ densi_florestas = ggplot(df, aes(x = score, group = factor(Cliente))) +
   labs(title = "Densidade do Score \n usando Floresta Aleatória",
        x = "Score",
        y = "Densidade") +  ylim(0,0.020)+
-  scale_fill_manual(values = cores) +  
-  scale_color_manual(values = cores) + 
+  scale_fill_manual(values = cores) +  # Definir cores de preenchimento
+  scale_color_manual(values = cores) + # Definir cores das bordas
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_x_continuous(breaks = pretty(df$score))+
   theme_minimal() +  
   theme(
     plot.title = element_text(hjust = 0.5,size = 14),
-    axis.title.x = element_text(size = 12),  
-    axis.title.y = element_text(size = 12),  
+    axis.title.x = element_text(size = 12),  # Aumenta o tamanho do título do eixo x
+    axis.title.y = element_text(size = 12),  # Aumenta o tamanho do título do eixo 
     panel.border = element_rect(color = "black",fill=NA),
     axis.text.x = element_text(angle = 45, hjust = 1,size=12),
     axis.text.y = element_text(size=12)
@@ -277,14 +274,17 @@ g2 <- ggplot(gerar_df(teste$faixas_score), aes(x = Categoria)) +
   geom_bar(aes(y = Representatividade.Freq * 100), stat = "identity", fill = "deepskyblue2",width = 0.5) +
   geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth=1) +
   geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2",alpha=2,size=2) +
-  labs(x = "Score", y = "Representatividade (%)", 
-       title = "Representatividade e Taxa de Inadimplência \n Floresta Aleatória") +
-  scale_y_continuous(limits = c(0,100), sec.axis = sec_axis(~./100, name = "Taxa de Inadimplência (%)")) + 
-  theme_minimal()+
-  scale_fill_manual(values = cores) +  
+  labs(x = "Score", y = "Frequência", 
+       title = "Frequência e Taxa de Inadimplência \n Floresta Aleatória") +
+  scale_y_continuous(
+    limits = c(0, 100),  # Define o limite do eixo Y principal
+    labels = percent_format(scale = 1),  # Formata o eixo Y principal como porcentagem
+    sec.axis = sec_axis(~., name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Eixo Y secundário transformado
+  ) +
+  theme_minimal() + 
   theme(
     plot.title = element_text(hjust = 0.5,size=14),
-    axis.title.x = element_text(size = 12),  
+    axis.title.x = element_text(size = 12),  # Aumenta o tamanho do título do eixo x
     axis.title.y = element_text(size = 12), 
     panel.border = element_rect(color = "black",fill=NA),
     axis.text.x = element_text(angle = 45, hjust = 1,size=12,color = "black"),
