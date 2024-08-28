@@ -1,9 +1,14 @@
-library(ggplot2)
-library(dplyr)
-library(scales)
+
+{
+  library(dplyr)
+  library(ggplot2)
+  library(gridExtra)
+  library(scales)
+}
+
 
 # Importando a base -------------------------------------------------------------------
-load("caminho")
+load("H:/Meu Drive/9º SEMESTRE/TG/RandomForest/base_sem_cat/base.RData")
 
 # Verificamos as variáveis mais significativas isoladamente com a Y
 matriz <- matrix(data=NA, ncol=2,nrow=length(5:219))
@@ -52,10 +57,8 @@ ggplot(df, aes(x = Bad.foto, y = Bad.var_resposta, group = 1)) +
 
 table(base$var_resposta,base$CAT_var_275)
 
-
 base$CAT_var_275 <- ifelse(base$CAT_var_275 == "C0", "NA",
                            ifelse(base$CAT_var_275 == "C1", "Sim", "Não"))
-
 cores = c("deepskyblue2","firebrick2")
 
 gerar_df <- function(variavel){
@@ -71,36 +74,38 @@ gerar_df <- function(variavel){
 }
 
 g1 <- ggplot(gerar_df(base$CAT_var_275), aes(x = Categoria)) +
-  geom_bar(aes(y = Representatividade.Freq * 100), stat = "identity", fill = "deepskyblue2",width = 0.35) +
-  geom_line(aes(y = Taxa_Inadimplencia * 1000, group = 1), color = "firebrick2", linewidth=1) +
-  geom_point(aes(y = Taxa_Inadimplencia * 1000), color = "firebrick2",size=2) +
+  geom_bar(aes(y = Representatividade.Freq * 100), stat = "identity", fill = "deepskyblue2", width = 0.5) +
+  geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth = 1) +
+  geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2", alpha = 1, size = 2) +
   labs(x = "Auxílio emergencial", y = "Frequência", 
-       title = "Frequência de EDS \n e Taxa de Inadimplência") +
+       title = "Frequência de auxílio\n e Taxa de Inadimplência") +
   scale_y_continuous(
-    labels = percent_format(scale = 1),  
-    sec.axis = sec_axis(~./10, name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Formata o eixo y secundário como porcentagem
+    labels = percent_format(scale = 1),  # Formata o eixo y principal como porcentagem
+    sec.axis = sec_axis(~., name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Formata o eixo y secundário como porcentagem
   ) +
-  theme_minimal() + scale_fill_manual(values = cores) +  
+  theme_minimal() +
+  scale_fill_manual(values = cores) +  
   theme(
-    plot.title = element_text(hjust = 0.5,size = 18),
-    axis.title.x = element_text(size = 15), 
-    axis.title.y = element_text(size = 15),  
-    panel.border = element_rect(color = "black",fill=NA),
-    axis.text.x = element_text(size=12,color = "black"),
-    axis.text.y = element_text(size=12,color = "black")
+    plot.title = element_text(hjust = 0.5, size = 18),
+    axis.title.x = element_text(size = 15),  
+    axis.title.y = element_text(size = 15), 
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.text.x = element_text(size = 12, color = "black"),
+    axis.text.y = element_text(size = 12, color = "black")
   )
+
 
 base$var_339 = ifelse(base$var_339==TRUE,"Sim","Não")
 
 g2 <- ggplot(gerar_df(base$var_339), aes(x = Categoria)) +
   geom_bar(aes(y = Representatividade.Freq * 100), stat = "identity", fill = "deepskyblue2",width = 0.35) +
-  geom_line(aes(y = Taxa_Inadimplencia * 1000, group = 1), color = "firebrick2", linewidth=1) +
-  geom_point(aes(y = Taxa_Inadimplencia * 1000), color = "firebrick2",size=2) +
+  geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth=1) +
+  geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2",size=2) +
   labs(x = "Endereço desfavorecido socialmente", y = "Frequência", 
        title = "Frequência de EDS \n e Taxa de Inadimplência") +
   scale_y_continuous(
     labels = percent_format(scale = 1),  
-    sec.axis = sec_axis(~./10, name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Formata o eixo y secundário como porcentagem
+    sec.axis = sec_axis(~., name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Formata o eixo y secundário como porcentagem
   ) +
   theme_minimal() + scale_fill_manual(values = cores) +  
   theme(
@@ -117,7 +122,7 @@ grid.arrange(g1,g2,ncol=2)
 
 # Análise descritiva de idade com a variavel resposta ------------------
 
-base = base %>% mutate(CAT_var_2 = ifelse(var_2 <= 20, "< 21",
+base = base %>% mutate(CAT_var_2 = ifelse(var_2 <= 20, "<= 20",
                                           ifelse(var_2 <= 25, "21-25",
                                                  ifelse(var_2 <= 30,"26-30",
                                                         ifelse(var_2 <= 35,"31-35 ",
@@ -141,7 +146,7 @@ g3 <- ggplot(gerar_df(base$CAT_var_2), aes(x = Categoria)) +
     axis.title.x = element_text(size = 15),  
     axis.title.y = element_text(size = 15),  
     panel.border = element_rect(color = "black",fill=NA),
-    axis.text.x = element_text(hjust = 0.5,size=12,color='black'),
+    axis.text.x = element_text(angle = 45, hjust = 1,size=12,color='black'),
     axis.text.y = element_text(size=12,color = "black")
   )
 
@@ -178,7 +183,7 @@ grid.arrange(g3,genero,ncol=2)
 
 # Descritiva de Genero 
 genero <- ggplot(gerar_df(base$var_1), aes(x = Categoria)) +
-  geom_bar(aes(y = Representatividade.Freq * 100), stat = "identity", fill = "deepskyblue2",width = 0.35) +
+  geom_bar(aes(y = Representatividade.Freq * 100), stat = "identity", fill = "deepskyblue2",width = 0.8) +
   geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth=1) +
   geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2",size=2) +
   labs(x = "Gênero", y = "Frequência", 
@@ -232,7 +237,7 @@ g1 <- ggplot(gerar_df(base$CAT_var_103), aes(x = Categoria)) +
   geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth=1) +
   geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2",size=2) +
   labs(x = "Categoria", y = "Frequência", 
-       title = "Quantidade de vencimentos quitados/n pontual nos últimos 2 anos") +
+       title = "Quantidade de vencimentos quitados\n pontual nos últimos 2 anos") +
   scale_y_continuous(
     labels = percent_format(scale = 1),  
     sec.axis = sec_axis(~., name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Formata o eixo y secundário como porcentagem
@@ -253,7 +258,7 @@ g2 <- ggplot(gerar_df(base$CAT_var_78), aes(x = Categoria)) +
   geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth=1) +
   geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2",size=2) +
   labs(x = "Categoria", y = "Frequência", 
-       title = "Valor de vencimentos quitados/n antecipados nos últimos 2 anos") +
+       title = "Valor de vencimentos quitados\n antecipados nos últimos 2 anos") +
   scale_y_continuous(
     labels = percent_format(scale = 1),  
     sec.axis = sec_axis(~., name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Formata o eixo y secundário como porcentagem
@@ -273,7 +278,7 @@ g3 <- ggplot(gerar_df(base$CAT_var_22), aes(x = Categoria)) +
   geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth=1) +
   geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2",size=2) +
   labs(x = "Categoria", y = "Frequência", 
-       title = "Atraso no pagamento /n nos últimos 6 meses") +
+       title = "Atraso no pagamento \n nos últimos 6 meses") +
   scale_y_continuous(
     labels = percent_format(scale = 1),  
     sec.axis = sec_axis(~., name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Formata o eixo y secundário como porcentagem
@@ -294,7 +299,7 @@ g4 <- ggplot(gerar_df(base$CAT_var_57), aes(x = Categoria)) +
   geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth=1) +
   geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2",size=2) +
   labs(x = "Categoria", y = "Frequência", 
-       title = "Total de contratos/n nos últimos 2 anos") +
+       title = "Total de contratos\n nos últimos 2 anos") +
   scale_y_continuous(
     labels = percent_format(scale = 1),  
     sec.axis = sec_axis(~., name = "Taxa de Inadimplência", labels = percent_format(scale = 1))  # Formata o eixo y secundário como porcentagem
