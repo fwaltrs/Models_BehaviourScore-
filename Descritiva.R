@@ -61,6 +61,7 @@ base$CAT_var_275 <- ifelse(base$CAT_var_275 == "C0", "NA",
                            ifelse(base$CAT_var_275 == "C1", "Sim", "Não"))
 cores = c("deepskyblue2","firebrick2")
 
+#gerar função para ajudar nos gráficos
 gerar_df <- function(variavel){
   tab <- table(variavel, base$var_resposta)
   taxa_inadimplencia = prop.table(tab, margin = 1)[,2]
@@ -94,7 +95,7 @@ g1 <- ggplot(gerar_df(base$CAT_var_275), aes(x = Categoria)) +
     axis.text.y = element_text(size = 12, color = "black")
   )
 
-
+# Análise descritiva de EDS com a variavel resposta ------------------
 base$var_339 = ifelse(base$var_339==TRUE,"Sim","Não")
 
 g2 <- ggplot(gerar_df(base$var_339), aes(x = Categoria)) +
