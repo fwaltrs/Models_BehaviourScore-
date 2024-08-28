@@ -51,7 +51,7 @@ floresta <- ranger(
   formula         = var_resposta ~ ., 
   data            = treino, 
   mtry            = 5,
-  num.trees = 1000, 
+  num.trees = 500, 
   importance = "impurity",
   replace=T,
   splitrule = "gini",
