@@ -315,3 +315,37 @@ g4 <- ggplot(gerar_df(base$CAT_var_57), aes(x = Categoria)) +
   )
 
 grid.arrange(g1, g2, g3,g4, ncol = 2)
+
+
+
+## boxplot
+
+ ggplot(base, aes(x = var_resposta, y = var_3, fill = var_resposta, color = var_resposta)) +
+  geom_boxplot(color = "black") +  # Define a borda preta dos boxplots
+  scale_fill_manual(values = cores) +  
+  labs(x = "Cliente", y = "Var 3", title = "Tempo até a primeira compra") +
+  scale_x_discrete() + theme_minimal() +  
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18),
+    axis.title.x = element_text(size = 15),  
+    axis.title.y = element_text(size = 15), 
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.text.x = element_text(size = 12, color = "black"),
+    axis.text.y = element_text(size = 12, color = "black"),
+    legend.position = "none"  # Remove a legenda
+  )
+
+ ggplot(base, aes(x = var_resposta, y = var_4, fill = var_resposta, color = var_resposta)) +
+  geom_boxplot(color = "black") +  # Define a borda preta dos boxplots
+  scale_fill_manual(values = cores) +  
+  labs(x = "Cliente", y = "Var 3", title = "Tempo até a primeira compra") +
+  scale_x_discrete() + theme_minimal() +  
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18),
+    axis.title.x = element_text(size = 15),  
+    axis.title.y = element_text(size = 15), 
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.text.x = element_text(size = 12, color = "black"),
+    axis.text.y = element_text(size = 12, color = "black"),
+    legend.position = "none"  # Remove a legenda
+  )
