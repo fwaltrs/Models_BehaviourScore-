@@ -1,4 +1,4 @@
-# Models_BehaviourScore
+# Métodos para prever um Behaviour Score
 Construção de modelos de aprendizado de máquina na predição da probabilidade do cliente ser bom pagador usando dados de transações, ou seja, queremos prever um Behaviour Score.
 Estudaremos modelos supervisionados de classificação, para essa predição serão estudados: Regressão Logística, Random Forest, XGBoost e LightGBM. 
 
