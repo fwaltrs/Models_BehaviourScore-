@@ -5,11 +5,11 @@
   library(scales)
 }
 
-
 load("H:/Meu Drive/9º SEMESTRE/TG/RandomForest/base_sem_cat/base.RData")
 base = base %>% filter(var_2 > 5)
 base = base[,-c(1,2,3)]
 base$var_resposta = factor(base$var_resposta)
+
 gerar_df <- function(variavel){
   tab <- table(variavel, base$var_resposta)
   taxa_inadimplencia = prop.table(tab, margin = 1)[,2]
@@ -26,18 +26,15 @@ gerar_df <- function(variavel){
 }
 
 gerar_df(base$foto)
-
 gerar_df(base$CAT_var_275) #Auxílio Emergencial 
 gerar_df(base$var_339) #EDS
 gerar_df(base$var_1) #Genero
 gerar_df(base$var_365) #Classe Econômica
 gerar_df(base$var_325) #UPA
 
-
-summary(base$var_2)
-
 cores = c("green2", "firebrick2")
 
+summary(base$var_2)
 boxplot_idade = ggplot(base, aes(x = var_resposta, y = var_2, fill = var_resposta, color = var_resposta)) +
   geom_boxplot(color = "black") +  # Define a borda preta dos boxplots
   scale_fill_manual(values = cores) +  
@@ -274,8 +271,6 @@ boxplot_var_110<-  ggplot(base, aes(x = var_resposta, y = var_90, fill = var_res
     legend.position = "none"  
   )
 
-
-
 summary(base$var_3)
 boxplot_var_3 <-  ggplot(base, aes(x = var_resposta, y = var_3, fill = var_resposta, color = var_resposta)) +
   geom_boxplot(color = "black") +  # Define a borda preta dos boxplots
@@ -291,7 +286,6 @@ boxplot_var_3 <-  ggplot(base, aes(x = var_resposta, y = var_3, fill = var_respo
     axis.text.y = element_text(size = 15, color = "black",face = "bold"),
     legend.position = "none"  
   )
-
 
 base$var_resposta = as.factor(base$var_resposta)
 summary(base$var_228)
@@ -325,7 +319,6 @@ boxplot_var_239 <-  ggplot(base, aes(x = var_resposta, y = var_239, fill = var_r
     legend.position = "none"  
   )
 
-
 grid.arrange(boxplot_var_199,
              boxplot_var_204,
              boxplot_var_110,
@@ -341,8 +334,6 @@ grid.arrange(boxplot_var_55,
              boxplot_var_4,
              boxplot_var_228,
              ncol = 3)
-
-
 
 
 base1 = base %>% filter(var_4 < 3000)
