@@ -19,17 +19,22 @@ library(randomForest)
 library(ranger)
 }
 
+
 ##########################################################################################
 ########################## IMPORTAR A BASE  #############################################
 
 load("H:/Meu Drive/9º SEMESTRE/TG/RandomForest/base_sem_cat/base.RData")
+base = base %>% filter(var_2 > 5)
+base = base[,-c(1,2,3)]
 
+#write_parquet(base, sink = "H:/Meu Drive/9º SEMESTRE/TG/RandomForest/base_sem_cat/base.parquet")
 set.seed(290)
 split <- sample(c("Treinamento","Teste"),prob=c(0.8,0.2),size=nrow(base),replace=TRUE)
 base$split <- split
 
-treino  = base[base$split =="Treinamento",-c(1,2,3,218)]
-teste  = base[base$split =="Teste",-c(1,2,3,218)]
+
+treino  = base[base$split =="Treinamento",-c(215)]
+teste  = base[base$split =="Teste",-c(215)]
 
 set.seed(290)
 split <- sample(c("Treinamento","Validacao"),prob=c(0.8,0.2),size=nrow(treino),replace=TRUE)
@@ -50,8 +55,9 @@ start.time <- Sys.time()
 floresta <- ranger(
   formula         = var_resposta ~ ., 
   data            = treino, 
-  mtry            = 5,
-  num.trees = 500, 
+  mtry            = 15,
+  max.depth     = 10,
+  num.trees = 250, 
   importance = "impurity",
   replace=T,
   splitrule = "gini",
@@ -62,11 +68,21 @@ floresta <- ranger(
 )
 end.time <- Sys.time()
 time.taken <- end.time - start.time
-time.taken
+time.taken 
+# mtry  = 15,
+# max.depth = 10,
+# num.trees = 250, com 1.788734 mins
 
+# mtry  = 20,
+# max.depth = 10,
+# num.trees = 250, com 1.998688 mins
 
-saveRDS(floresta, file = "H:/Meu Drive/9º SEMESTRE/TG/RandomForest/base_sem_cat/reg_rf_2.rds")
-caminho="H:/Meu Drive/9º SEMESTRE/TG/RandomForest/base_sem_cat/reg_rf_2.rds"
+# mtry  = 10,
+# max.depth = 10,
+# num.trees = 250, com 1.536168 mins
+
+saveRDS(floresta, file = "H:/Meu Drive/9º SEMESTRE/TG/RandomForest/FINAL/florestas_mtry15.rds")
+caminho= "H:/Meu Drive/9º SEMESTRE/TG/RandomForest/FINAL/florestas_mtry15.rds"
 floresta = readRDS(caminho)
 
 
@@ -86,11 +102,19 @@ time.taken
 importances <- tibble(variable=names(floresta$variable.importance), importance = floresta$variable.importance) %>% 
   arrange(desc(importance))
 
-ggplot(importances %>% top_n(n=20), aes(x=reorder(variable, importance), 
-                                        y=importance)) +
+importancias <- data.frame(variavel = names(floresta$variable.importance),
+                           importancia = floresta$variable.importance)
+
+
+importancias <- importancias[order(-importancias$importancia), ]
+importancias$importancia_normalizada <- importancias$importancia / sum(importancias$importancia)
+importancias$importancia_normalizada_100 = importancias$importancia_normalizada *100
+
+ggplot(importancias %>% top_n(n=25), aes(x=reorder(variavel, importancia_normalizada_100), 
+                                        y=importancia_normalizada_100)) +
   geom_bar(stat="identity",col="white",fill="red4")+
   coord_flip() +
-  labs(title = "Features mais importantes\n usando Floresta Aleatória",
+  labs(title = "Features mais importantes\n usando Random Forest",
        x = "Feature",
        y = "Importância") + 
   theme_minimal() +  
@@ -103,13 +127,14 @@ ggplot(importances %>% top_n(n=20), aes(x=reorder(variable, importance),
     axis.text.y = element_text(size=12,color='black')
   )
 
+write.table(previsoes,"H:/Meu Drive/9º SEMESTRE/TG/PREDITOS/pred_reg_randomforest.txt",sep=';')
 
 ###############################################################################################################
 ############################### Medidas de Desempenho #############################################################
 
 # Área sob a curva ROC      
-roc_obj_mod2 <- roc(teste$var_resposta, previsoes$predictions[,1])
-auc_roc <- auc(roc_obj)
+roc_obj_rf <- roc(teste$var_resposta, previsoes$predictions[,1])
+auc_roc <- auc(roc_obj_rf)
 
 # Calcular o índice de Gini
 gini <- 2 * auc_roc - 1
@@ -123,7 +148,7 @@ ggroc(curvaroc) +
   geom_abline(slope = 1, intercept = 1,linetype = "dashed", color = "red4",size=1.5) +
   geom_text(aes(x = 0.8, y = 0.4, label = paste("AUC:", round(auc(curvaroc), 2))),
             color = "red4", size = 5) +  # Adiciona o texto ao gráfico
-  labs(title = "Curva ROC para o\n  Modelo de Floresta Aleatória",
+  labs(title = "Curva ROC para o\n  Modelo de Random Forest",
        x = "1-Especificidade",
        y = "Sensibilidade") + 
   theme_minimal() +  
@@ -144,39 +169,42 @@ ggroc(curvaroc) +
 j_estat <- curvaroc$sensitivities+curvaroc$specificities-1
 max_j_estat<- max(j_estat)
 id <- which(j_estat==max_j_estat)
-j <- curvaroc$thresholds[id] 
+j <- curvaroc$thresholds[id] #0.9421705
 
-# Média - G
-g_mean <- sqrt(curvaroc$sensitivities*curvaroc$specificities)
-max_g_mean<- max(g_mean)
-id <- which(g_mean==max_g_mean)
-g <- curvaroc$thresholds[id] 
+
+# MÉDIA DAS PROBABILIDADES
+m = mean(previsoes$predictions[,1]) #0.946
+
 
 #Curva precisão-Recall
-library(ggplot2)
-library(dplyr)
-library(yardstick)
-data_teste <- data.frame(as.factor(teste$var_resposta),previsoes$predictions[,1])
-names(data_teste)[1] = "verdadeiro"
-names(data_teste)[2] = "probabilidade"
+recall <- curvaroc$sensitivities  # TPR ou recall
+fpr <- 1 - curvaroc$specificities  # FPR
 
-curve <- pr_curve(data_teste, truth= verdadeiro, probabilidade)
-Recall<-curve$recall
-Precision<- curve$precision
-F_Measure = (2 * Precision * Recall) / (Precision + Recall)
-max_F_Measure<- max(F_Measure)
+# Obter o número de exemplos positivos (Pos) e negativos (Neg)
+Pos <- sum(teste$var_resposta == 1)  # Total de positivos reais
+Neg <- sum(teste$var_resposta == 0)  # Total de negativos reais
+
+
+precisao <- (recall * Pos) / ((recall * Pos) + (fpr * Neg))
+
+precisao_recall = data.frame(Precisao = precisao, Recall = recall, corte = curvaroc$thresholds)
+F_Measure = (2 * precisao * recall) / (precisao + recall)
+
+max_F_Measure = summary(F_Measure)[6]
 id <- which(F_Measure==max_F_Measure)
-curve$.threshold[id] 
+precisao_recall[id,]$corte #0.8550067
+
+
 
 
 # Verificando qual ponto de corte escolher
 probabilidades <- predict(floresta, data = teste)
-threshold1 <- 0.930
-threshold2 <- 0.580
-threshold3 <- 0.811
+threshold1 <- 0.942
+threshold2 <- 0.946
+threshold3 <- 0.855
 
 # Aplicar o ponto de corte 
-previsoes_threshold1 <- ifelse(probabilidades$predictions[,1] < threshold1, 1, 0)
+previsoes_threshold1 <- ifelse(probabilidades$predictions[,1] < threshold2, 1, 0)
 table(previsoes_threshold1)
 
 risco = 1*(as.numeric(previsoes_threshold1)!= as.numeric(as.matrix(teste$var_resposta)))  %>% mean()
@@ -212,7 +240,7 @@ score_treino =previsoes_treino$predictions[,1]*1000 ##prob de ser 0
 treino$score_treino = score_treino
 ks.test(treino[treino$var_resposta==0,]$score_treino, treino[treino$var_resposta==1,]$score_treino)$statistic
 
-# KS para a amostra de teste
+# KS para a amostra de teste #0.4365247
 previsoes_teste <- predict(floresta, data = teste)
 score_teste =previsoes_teste$predictions[,1]*1000 
 teste$score_teste = score_teste
@@ -226,7 +254,7 @@ df[,2] <- as.factor(df[,2])
 cores = c("green2", "firebrick2")
 densi_florestas = ggplot(df, aes(x = score, group = factor(Cliente))) + 
   geom_density(aes(fill = Cliente, color = Cliente), alpha = 0.6) +
-  labs(title = "Densidade do Score \n usando Floresta Aleatória",
+  labs(title = "Densidade do Score \n usando Random Forest",
        x = "Score",
        y = "Densidade") +  ylim(0,0.020)+
   scale_fill_manual(values = cores) +  # Definir cores de preenchimento
@@ -235,12 +263,27 @@ densi_florestas = ggplot(df, aes(x = score, group = factor(Cliente))) +
   scale_x_continuous(breaks = pretty(df$score))+
   theme_minimal() +  
   theme(
-    plot.title = element_text(hjust = 0.5,size = 14),
-    axis.title.x = element_text(size = 12),  # Aumenta o tamanho do título do eixo x
-    axis.title.y = element_text(size = 12),  # Aumenta o tamanho do título do eixo 
+    plot.title = element_text(hjust = 0.5,size = 18),
+    axis.title.x = element_text(size = 15),  # Aumenta o tamanho do título do eixo x
+    axis.title.y = element_text(size = 15),  # Aumenta o tamanho do título do eixo 
     panel.border = element_rect(color = "black",fill=NA),
     axis.text.x = element_text(angle = 45, hjust = 1,size=12),
     axis.text.y = element_text(size=12)
+  )
+
+boxplot_rf = ggplot(df, aes(x = Cliente, y = score, fill = Cliente, color = Cliente)) +
+  geom_boxplot(color = "black") +  # Define a borda preta dos boxplots
+  scale_fill_manual(values = cores) +  
+  labs(x = "Cliente", y = "Score", title = "Score Random Forest") +
+  scale_x_discrete() + theme_minimal() +  
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18),
+    axis.title.x = element_text(size = 15),  
+    axis.title.y = element_text(size = 15), 
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.text.x = element_text(size = 12, color = "black"),
+    axis.text.y = element_text(size = 12, color = "black"),
+    legend.position = "none"  # Remove a legenda
   )
 
 ##############################################################################################
@@ -269,13 +312,13 @@ gerar_df <- function(variavel){
   return(df)
 }
 
-
+library(scales)
 g2 <- ggplot(gerar_df(teste$faixas_score), aes(x = Categoria)) +
   geom_bar(aes(y = Representatividade.Freq * 100), stat = "identity", fill = "deepskyblue2",width = 0.5) +
   geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth=1) +
   geom_point(aes(y = Taxa_Inadimplencia * 100), color = "firebrick2",alpha=2,size=2) +
   labs(x = "Score", y = "Frequência", 
-       title = "Frequência e Taxa de Inadimplência \n Floresta Aleatória") +
+       title = "Frequência e Taxa de Inadimplência \n Random Forest") +
   scale_y_continuous(
     limits = c(0, 100),  # Define o limite do eixo Y principal
     labels = percent_format(scale = 1),  # Formata o eixo Y principal como porcentagem
@@ -283,11 +326,11 @@ g2 <- ggplot(gerar_df(teste$faixas_score), aes(x = Categoria)) +
   ) +
   theme_minimal() + 
   theme(
-    plot.title = element_text(hjust = 0.5,size=14),
-    axis.title.x = element_text(size = 12),  # Aumenta o tamanho do título do eixo x
-    axis.title.y = element_text(size = 12), 
+    plot.title = element_text(hjust = 0.5,size = 18),
+    axis.title.x = element_text(size = 15),  # Aumenta o tamanho do título do eixo x
+    axis.title.y = element_text(size = 15),  # Aumenta o tamanho do título do eixo 
     panel.border = element_rect(color = "black",fill=NA),
-    axis.text.x = element_text(angle = 45, hjust = 1,size=12,color = "black"),
-    axis.text.y = element_text(size=12,color = "black")
+    axis.text.x = element_text(angle = 45, hjust = 1,size=12),
+    axis.text.y = element_text(size=12)
   )
-
+summary(teste$score_teste)
