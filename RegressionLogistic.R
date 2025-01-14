@@ -49,7 +49,7 @@ vc_lasso = glmnet::cv.glmnet(X_treino.matrix,
                              Y_treino,
                              alpha=1,
                              family="binomial",
-                             type.measure =  "auc")
+                             type.measure =  "deviance")
 
 
 end.time <- Sys.time()
