@@ -21,19 +21,22 @@ library(PRROC)
 ###############################################################################################################
 ############################### Importando a base com dummies #############################################################
 load("H:/Meu Drive/9º SEMESTRE/TG/RandomForest/base_sem_cat/base.RData")
+base = base %>% filter(var_2 > 15)
+base = base[,-c(1,2,3)]
 dmy = dummyVars(" ~ .", data = base[], fullRank=T)
 base = data.frame(predict(dmy, newdata = base))
 
 
 ###############################################################################################################
 ############################### Transformações e conjuntos de treinamento e validacao #########################
+
 set.seed(290)
 split <- sample(c("Treinamento","Teste"),prob=c(0.8,0.2),size= nrow(base),replace=TRUE)
 base$split = split
 table(split)
 
-X_treino  = base[base$split =="Treinamento",-c(1,2,3,4,5,6,7,8,226)]
-Y_treino = base[base$split=="Treinamento",c(8)] 
+X_treino  = base[base$split =="Treinamento",-c(1,219)]
+Y_treino = base[base$split=="Treinamento",c(1)] 
 Y_treino = 1-Y_treino
 Y_treino = as.factor(Y_treino)
 
@@ -44,21 +47,21 @@ X_treino.matrix = X_treino %>% as.matrix()
 ############################### Modelo ########################################################################
 
 start.time <- Sys.time()
-set.seed(29) 
+set.seed(50) 
 vc_lasso = glmnet::cv.glmnet(X_treino.matrix,
                              Y_treino,
                              alpha=1,
                              family="binomial",
-                             type.measure =  "deviance")
+                             type.measure = "deviance")
 
 
 end.time <- Sys.time()
 time.taken <- end.time - start.time
-time.taken 
+time.taken # AUC:  22.61487 mins    Deviance: 20.09104 mins
 plot(vc_lasso)
 
-saveRDS(vc_lasso, file = "H:/Meu Drive/9º SEMESTRE/TG/Regressao_logistica/base_sem_cat/reg_logis_rsme.rds")
-caminho="H:/Meu Drive/9º SEMESTRE/TG/Regressao_logistica/base_sem_cat/reg_logis_2.rds"
+saveRDS(vc_lasso, file = "H:/Meu Drive/9º SEMESTRE/TG/Regressao_logistica/FINAL/modelo_RL_semente50_auc.rds" )
+caminho="H:/Meu Drive/9º SEMESTRE/TG/Regressao_logistica/FINAL/modelo_RL_semente50_deviance.rds"
 vc_lasso = readRDS(caminho)
 
 ###############################################################################################################
@@ -80,7 +83,7 @@ lista = unique(lista$variavel)
 ###############################################################################################################
 ################### Gráfico de importancia  ###################################################################
 
-theme_set(theme_gray(base_size = 20))
+theme_set(theme_gray(base_size = 40))
 coefs_estimates <- data.frame(Variavel=
                                 rownames(coefs_estimates), Coeficientes=
                                 coefs_estimates[,1])
@@ -89,12 +92,12 @@ coef_pos <- coefs_estimates %>% arrange(desc(Coeficientes))
 coef_neg <- coefs_estimates %>% arrange(Coeficientes)
 
 
-graf_pos <- ggplot(data=coef_pos[2:16,],aes(x=reorder(Variavel,
+graf_pos <- ggplot(data=coef_pos[2:24,],aes(x=reorder(Variavel,
                                                       Coeficientes), y = Coeficientes)) +
   geom_bar(stat="identity",col="white",fill="blue4")+coord_flip()+
   labs(title = "Coeficientes Positivos",
        x = "Feature",
-       y = "Estimativa") + theme_minimal()  +  
+       y = "Estimativa") + theme_minimal()   +
   theme(
     plot.title = element_text(hjust = 0.5,size = 18),
     axis.title.x = element_text(size = 15,color="black"),  # Aumenta o tamanho do título do eixo x
@@ -105,7 +108,7 @@ graf_pos <- ggplot(data=coef_pos[2:16,],aes(x=reorder(Variavel,
   ) 
 
 
-graf_neg <- ggplot(data=coef_neg[2:16,],aes(x=reorder(Variavel,
+graf_neg <- ggplot(data=coef_neg[1:28,],aes(x=reorder(Variavel,
                                                       -Coeficientes), y = Coeficientes)) + 
   geom_bar(stat="identity",col="white",fill="red4")+coord_flip()+
   labs(title = "Coeficientes Negativos",
@@ -125,36 +128,30 @@ ggarrange(graf_neg,graf_pos,ncol=2,nrow=1)
 ################### Medidas de Desempenho  ####################################################################
 
 ####### Usando o conjunto de Teste ########################################################################
-conjunto_teste = base[base$split =="Teste",-c(1,2,3,4,5,6,7,226)]
-X_teste <- base[base$split =="Teste",-c(1,2,3,4,5,6,7,8,226)]
+conjunto_teste = base[base$split =="Teste",-c(219)]
+X_teste <- base[base$split =="Teste",-c(1,219)]
 X_teste.matrix <- X_teste %>% as.matrix()
-
-valores_preditos_1 <- vc_lasso %>% predict(newx = X_teste.matrix,type="class",
-                                           s="lambda.1se") # corte padrão 0.5
-
 
 start.time <- Sys.time()
 valores_preditos_2 <- vc_lasso %>% predict(newx = X_teste.matrix,type="response",
                                            s="lambda.1se") 
 end.time <- Sys.time()
+write.table(valores_preditos_2,"H:/Meu Drive/9º SEMESTRE/TG/PREDITOS/pred_reg_logis.txt",sep=';')
+
 time.taken <- end.time - start.time
 time.taken
 
-valores_preditos = 1 - as.numeric(valores_preditos_1)
-table(valores_preditos) # corte padrão 0.5
-
-# Medidas de Desempenho
 
 # Área da curva ROC
-roc_obj <- roc(conjunto_teste$var_resposta,valores_preditos_2)
-auc_roc <- auc(roc_obj)
+roc_obj_rl <- roc(conjunto_teste$var_resposta,as.numeric(valores_preditos_2))
+auc_roc <- auc(roc_obj_rl) #Deviance: 0.7846 AUC: 0.7887
 
 # Índice de Gini
-gini <- 2 * auc_roc - 1
+gini <- 2 * auc_roc - 1 #AUC: 0.5773745
 
 # Curva ROC
 curvaroc <- roc(conjunto_teste$var_resposta, valores_preditos_2) #prob de ser bom
-tab <- cbind(curvaroc$sensitivities,curvaroc$specificities,curvaroc$thresholds,1-curvaroc$thresholds)
+tab <- cbind(curvaroc$sensitivities,curvaroc$specificities,curvaroc$thresholds)
 tab <- as.data.frame(tab)
 
 ggroc(curvaroc) +
@@ -181,31 +178,31 @@ ggroc(curvaroc) +
 j_estat <- curvaroc$sensitivities+curvaroc$specificities-1
 max_j_estat<- max(j_estat)
 id <- which(j_estat==max_j_estat)
-j <- curvaroc$thresholds[id]
+j <- curvaroc$thresholds[id] #0.9433656
 
 
-# Média - G
-g_mean <- sqrt(curvaroc$sensitivities*curvaroc$specificities)
-max_g_mean<- max(g_mean)
-id <- which(g_mean==max_g_mean)
-g <- curvaroc$thresholds[id] 
+# MÉDIA DAS PROBABILIDADES
+m = mean(valores_preditos_2) # 0.9460404
 
-
+library(PRROC)
 #Curva precisão-Recall
-library(ggplot2)
-library(dplyr)
-library(yardstick)
-data_teste <- data.frame(as.factor(conjunto_teste$var_resposta),valores_preditos_2)
-names(data_teste)[1] = "verdadeiro"
-names(data_teste)[2] = "probabilidade"
+verdadeiro=conjunto_teste$var_resposta
+recall <- curvaroc$sensitivities  # TPR ou recall
+fpr <- 1 - curvaroc$specificities  # FPR
 
-curve <- pr_curve(data_teste, truth= verdadeiro, probabilidade)
-Recall<-curve$recall
-Precision<- curve$precision
-F_Measure = (2 * Precision * Recall) / (Precision + Recall)
-max_F_Measure<- max(F_Measure)
+# Obter o número de exemplos positivos (Pos) e negativos (Neg)
+Pos <- sum(verdadeiro == 1)  # Total de positivos reais
+Neg <- sum(verdadeiro == 0)  # Total de negativos reais
+
+
+precisao <- (recall * Pos) / ((recall * Pos) + (fpr * Neg))
+
+precisao_recall = data.frame(Precisao = precisao, Recall = recall, corte = curvaroc$thresholds)
+F_Measure = (2 * precisao * recall) / (precisao + recall)
+
+max_F_Measure = summary(F_Measure)[6]
 id <- which(F_Measure==max_F_Measure)
-curve$.threshold[id] 
+precisao_recall[id,]$corte #0.8706085
 
 
 ###############################################################################################################
@@ -214,9 +211,10 @@ curve$.threshold[id]
 probabilidades <- predict(vc_lasso, X_teste.matrix,
                           s=vc_lasso$lambda.1se,  type = "response")
 
-threshold1 <- 0.838
-threshold2 <- 0.941
-threshold3 <- 0.359
+
+threshold1 <- 0.943
+threshold2 <- 0.946
+threshold3 <- 0.870
 
 
 # Aplicar o ponto de corte 
@@ -266,7 +264,7 @@ ks.test(treino[treino$var_resposta==0,]$score_treino, treino[treino$var_resposta
 
 
 # Avaliando KS para teste
-teste = base[base$split =="Teste",-c(1,2,3,4,5,6,7,8,226)]
+teste = base[base$split =="Teste",-c(1,219)]
 teste.matrix = teste %>% as.matrix()
 valores_preditos_teste = predict(vc_lasso,s=vc_lasso$lambda.1se,newx=teste.matrix,type = "response")
 
@@ -276,12 +274,15 @@ teste$score_teste = score_teste
 
 ks.test(teste[teste$var_resposta==0,]$score_teste, teste[teste$var_resposta==1,]$score_teste)$statistic   
 
+# deviance: 0.4273477 e AUC: 0.4384433
+
 
 #############################################################################################
 ############################### Densidade do score ##########################################
 
 
 df <- data.frame(score = score_teste, Cliente = as.factor(teste$var_resposta))
+
 
 cores = c("green2", "firebrick2")
 
@@ -297,15 +298,29 @@ densi_rl = ggplot(df, aes(x = s1, group = Cliente)) +
   scale_x_continuous(breaks = pretty(df$s1))+
   theme_minimal() +  
   theme(
-    plot.title = element_text(hjust = 0.5,size = 14),
-    axis.title.x = element_text(size = 12),  
-    axis.title.y = element_text(size = 12), 
+    plot.title = element_text(hjust = 0.5,size = 18),
+    axis.title.x = element_text(size = 15),  # Aumenta o tamanho do título do eixo x
+    axis.title.y = element_text(size = 15),  # Aumenta o tamanho do título do eixo 
     panel.border = element_rect(color = "black",fill=NA),
     axis.text.x = element_text(angle = 45, hjust = 1,size=12),
     axis.text.y = element_text(size=12)
   )
 
 
+boxplot_rl  = ggplot(df, aes(x = Cliente, y = s1, fill = Cliente, color = Cliente)) +
+  geom_boxplot(color = "black") +  # Define a borda preta dos boxplots
+  scale_fill_manual(values = cores) +  
+  labs(x = "Cliente", y = "Score", title = "Score Regressão Logística") +
+  scale_x_discrete() + theme_minimal() +  
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18),
+    axis.title.x = element_text(size = 15),  
+    axis.title.y = element_text(size = 15), 
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.text.x = element_text(size = 12, color = "black"),
+    axis.text.y = element_text(size = 12, color = "black"),
+    legend.position = "none"  # Remove a legenda
+  )
 
 ####################################################################################
 ############################### Descritiva do score ##########################################
@@ -332,7 +347,7 @@ gerar_df <- function(variavel){
   
   return(df)
 }
-
+library(scales)
 g1 <-ggplot(gerar_df(teste$faixas_score), aes(x = Categoria)) +
   geom_bar(aes(y = Representatividade.Freq * 100), stat = "identity", fill = "deepskyblue2", width = 0.5) +
   geom_line(aes(y = Taxa_Inadimplencia * 100, group = 1), color = "firebrick2", linewidth = 1) +  # Ajuste na escala
@@ -346,19 +361,20 @@ g1 <-ggplot(gerar_df(teste$faixas_score), aes(x = Categoria)) +
   ) +
   theme_minimal() + 
   theme(
-    plot.title = element_text(hjust = 0.5, size = 14),
-    axis.title.x = element_text(size = 12),  
-    axis.title.y = element_text(size = 12), 
-    panel.border = element_rect(color = "black", fill = NA),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 12, color = "black"),
-    axis.text.y = element_text(size = 12, color = "black")
+    plot.title = element_text(hjust = 0.5,size = 18),
+    axis.title.x = element_text(size = 15),  # Aumenta o tamanho do título do eixo x
+    axis.title.y = element_text(size = 15),  # Aumenta o tamanho do título do eixo 
+    panel.border = element_rect(color = "black",fill=NA),
+    axis.text.x = element_text(angle = 45, hjust = 1,size=12),
+    axis.text.y = element_text(size=12)
   )
+
 
 library(gridExtra)
 
 grid.arrange(densi_rl, densi_florestas, ncol = 2)
 
-grid.arrange(g1, g2, ncol = 2)
+grid.arrange(boxplot_rf, boxplot_xgb, ncol = 2)
 
 
 
